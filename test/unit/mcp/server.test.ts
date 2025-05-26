@@ -1,35 +1,35 @@
 /**
  * Tests for the MCP server
  */
-import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import http from 'http';
 import { AddressInfo } from 'net';
 
 // Mock the fs module
-jest.mock('fs', () => {
+vi.mock('fs', () => {
   return {
     promises: {
-      readFile: jest.fn().mockResolvedValue(''),
-      writeFile: jest.fn().mockResolvedValue(undefined),
-      mkdir: jest.fn().mockResolvedValue(undefined),
-      readdir: jest.fn().mockResolvedValue([]),
-      stat: jest.fn().mockResolvedValue({ isDirectory: () => true })
+      readFile: vi.fn().mockResolvedValue(''),
+      writeFile: vi.fn().mockResolvedValue(undefined),
+      mkdir: vi.fn().mockResolvedValue(undefined),
+      readdir: vi.fn().mockResolvedValue([]),
+      stat: vi.fn().mockResolvedValue({ isDirectory: () => true })
     },
-    createReadStream: jest.fn(),
-    existsSync: jest.fn().mockReturnValue(true)
+    createReadStream: vi.fn(),
+    existsSync: vi.fn().mockReturnValue(true)
   };
 });
 
 // Mock the claude API client
-jest.mock('../../../src/api/claude-client.js', () => {
+vi.mock('../../../src/api/claude-client.js', () => {
   return {
-    ClaudeClient: jest.fn().mockImplementation(() => {
+    ClaudeClient: vi.fn().mockImplementation(() => {
       return {
-        listProjects: jest.fn().mockResolvedValue([
+        listProjects: vi.fn().mockResolvedValue([
           { id: 'project-1', name: 'Project 1' },
           { id: 'project-2', name: 'Project 2' }
         ]),
-        getProject: jest.fn().mockResolvedValue({
+        getProject: vi.fn().mockResolvedValue({
           id: 'project-1',
           name: 'Project 1',
           knowledgeBase: {
@@ -37,20 +37,20 @@ jest.mock('../../../src/api/claude-client.js', () => {
             fileCount: 2
           }
         }),
-        listKnowledgeFiles: jest.fn().mockResolvedValue([
+        listKnowledgeFiles: vi.fn().mockResolvedValue([
           { id: 'file-1', name: 'file1.txt' },
           { id: 'file-2', name: 'file2.md' }
         ]),
-        getKnowledgeFile: jest.fn().mockResolvedValue({
+        getKnowledgeFile: vi.fn().mockResolvedValue({
           id: 'file-1',
           name: 'file1.txt',
           content: 'File 1 content'
         }),
-        uploadKnowledgeFile: jest.fn().mockResolvedValue({
+        uploadKnowledgeFile: vi.fn().mockResolvedValue({
           id: 'file-3',
           name: 'file3.js'
         }),
-        deleteKnowledgeFile: jest.fn().mockResolvedValue(undefined)
+        deleteKnowledgeFile: vi.fn().mockResolvedValue(undefined)
       };
     })
   };
@@ -126,7 +126,7 @@ describe('MCP Server', () => {
       server.close(() => resolve());
     });
     
-    jest.clearAllMocks();
+    vi.resetAllMocks();
   });
   
   test('should respond to health check request', async () => {

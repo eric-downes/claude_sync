@@ -1,225 +1,257 @@
 /**
- * Tests for the browser automation module
+ * Tests for the ClaudeBrowserClient - browser automation for Claude.ai
  */
-import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { createTestClaudeWeb } from '../../utils/test-utils.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ClaudeBrowserClient } from '../../../src/api/claude-browser-client.js';
 
-// Mock the playwright module
-jest.mock('playwright', () => {
-  const mockPage = {
-    goto: jest.fn().mockResolvedValue(null),
-    content: jest.fn().mockResolvedValue(''),
-    evaluate: jest.fn().mockResolvedValue(null),
-    fill: jest.fn().mockResolvedValue(null),
-    click: jest.fn().mockResolvedValue(null),
-    waitForSelector: jest.fn().mockResolvedValue(null),
-    waitForNavigation: jest.fn().mockResolvedValue(null),
-    $: jest.fn().mockResolvedValue(null),
-    $$: jest.fn().mockResolvedValue([]),
-    setContent: jest.fn().mockResolvedValue(null),
-    url: jest.fn().mockReturnValue(''),
-    close: jest.fn().mockResolvedValue(null)
-  };
+describe('ClaudeBrowserClient', () => {
+  let client: ClaudeBrowserClient;
   
-  const mockContext = {
-    newPage: jest.fn().mockResolvedValue(mockPage),
-    close: jest.fn().mockResolvedValue(null)
-  };
-  
-  const mockBrowser = {
-    newContext: jest.fn().mockResolvedValue(mockContext),
-    close: jest.fn().mockResolvedValue(null)
-  };
-  
-  return {
-    chromium: {
-      launch: jest.fn().mockResolvedValue(mockBrowser)
-    }
-  };
-});
-
-// We'll import these after the mocks are set up
-let BrowserAutomation: any;
-let playwright: any;
-
-describe('Browser Automation', () => {
-  let mockClaudeWeb: any;
-  
-  beforeEach(async () => {
-    // Create a mock Claude web interface
-    mockClaudeWeb = createTestClaudeWeb();
+  beforeEach(() => {
+    vi.clearAllMocks();
     
-    // Setup playwright mock
-    playwright = require('playwright');
+    // Mock console methods to suppress output during tests
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     
-    // Mock the page content method to return mock web content
-    const mockPage = playwright.chromium.launch().then(browser => 
-      browser.newContext().then(context => context.newPage()));
-      
-    mockPage.then(page => {
-      page.content.mockImplementation(async () => {
-        const url = page.url();
-        if (url.includes('/login')) {
-          return mockClaudeWeb.renderLoginPage();
-        } else if (url.includes('/projects') && url.includes('/edit')) {
-          const projectId = url.split('/')[4];
-          return mockClaudeWeb.renderProjectEditPage(projectId);
-        } else if (url.includes('/projects') && !url.includes('/edit')) {
-          if (url === '/projects') {
-            return mockClaudeWeb.renderProjectsPage();
-          }
-          const projectId = url.split('/')[4];
-          return mockClaudeWeb.renderProjectPage(projectId);
-        } else if (url === '/home') {
-          return mockClaudeWeb.renderHomePage();
-        }
-        return '';
-      });
-      
-      page.goto.mockImplementation(async (url) => {
-        page.url.mockReturnValue(url);
-        return null;
-      });
-      
-      page.evaluate.mockImplementation(async (fn, ...args) => {
-        // This is a simplistic mock - in reality evaluate would run the function in the browser context
-        if (fn.toString().includes('querySelector') && fn.toString().includes('innerText')) {
-          return 'Mocked text content';
-        }
-        return null;
-      });
+    // Create client with test credentials
+    client = new ClaudeBrowserClient({
+      email: 'test@example.com',
+      password: 'testpassword'
     });
-    
-    // Now import the browser automation module
-    const browserAutomationModule = await import('../../../src/api/browser-automation.js');
-    BrowserAutomation = browserAutomationModule.default || browserAutomationModule.BrowserAutomation;
   });
   
   afterEach(() => {
-    // Clean up
-    mockClaudeWeb.close();
-    jest.clearAllMocks();
+    vi.restoreAllMocks();
   });
   
-  test('should initialize browser automation', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
+  it('should initialize with credentials', () => {
+    const testClient = new ClaudeBrowserClient({
+      email: 'user@test.com',
+      password: 'secret123'
+    });
     
-    // The test will check that the browser automation initializes correctly
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // expect(playwright.chromium.launch).toHaveBeenCalled();
+    expect(testClient).toBeDefined();
+    // Test that getCurrentUser reflects the provided email
+    testClient.getCurrentUser().then(user => {
+      expect(user.email).toBe('user@test.com');
+    });
   });
   
-  test('should navigate to Claude login page', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
-    
-    // The test will check that the browser automation can navigate to the login page
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // await automation.navigateToLogin();
-    // const page = await playwright.chromium.launch().then(browser => browser.newContext().then(context => context.newPage()));
-    // expect(page.goto).toHaveBeenCalledWith('https://claude.ai/login');
+  it('should initialize without credentials', () => {
+    const noCredsClient = new ClaudeBrowserClient();
+    expect(noCredsClient).toBeDefined();
   });
   
-  test('should log in to Claude', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
+  it('should set credentials via setCredentials method', () => {
+    const testClient = new ClaudeBrowserClient();
+    testClient.setCredentials('new@example.com', 'newpassword');
     
-    // The test will check that the browser automation can log in to Claude
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // await automation.login('test@example.com', 'password');
-    // const page = await playwright.chromium.launch().then(browser => browser.newContext().then(context => context.newPage()));
-    // expect(page.fill).toHaveBeenCalledWith('input[name="email"]', 'test@example.com');
-    // expect(page.fill).toHaveBeenCalledWith('input[name="password"]', 'password');
-    // expect(page.click).toHaveBeenCalledWith('button[type="submit"]');
+    // Test that the credentials were set by calling getCurrentUser
+    testClient.getCurrentUser().then(user => {
+      expect(user.email).toBe('new@example.com');
+    });
   });
   
-  test('should navigate to projects page', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
+  it('should throw error when trying to access projects without credentials', async () => {
+    const noCredsClient = new ClaudeBrowserClient();
     
-    // The test will check that the browser automation can navigate to the projects page
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // await automation.navigateToProjects();
-    // const page = await playwright.chromium.launch().then(browser => browser.newContext().then(context => context.newPage()));
-    // expect(page.goto).toHaveBeenCalledWith('https://claude.ai/projects');
+    await expect(noCredsClient.listProjects()).rejects.toThrow(
+      'Login credentials are required for browser automation'
+    );
   });
   
-  test('should extract project list', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
+  it('should simulate login and list projects', async () => {
+    const projects = await client.listProjects();
     
-    // The test will check that the browser automation can extract the project list
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // await automation.navigateToProjects();
-    // const projects = await automation.getProjects();
-    // expect(projects).toBeInstanceOf(Array);
-    // expect(projects.length).toBeGreaterThan(0);
+    expect(projects).toBeDefined();
+    expect(Array.isArray(projects)).toBe(true);
+    expect(projects.length).toBeGreaterThan(0);
+    
+    // Check project structure
+    const project = projects[0];
+    expect(project.id).toBeDefined();
+    expect(project.name).toBeDefined();
+    expect(project.ownerId).toBe('user-browser');
+    expect(typeof project.isShared).toBe('boolean');
   });
   
-  test('should navigate to a specific project', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
+  it('should get specific project details', async () => {
+    // First get list of projects to get a valid ID
+    const projects = await client.listProjects();
+    const projectId = projects[0].id;
     
-    // The test will check that the browser automation can navigate to a specific project
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // await automation.navigateToProject('project-id');
-    // const page = await playwright.chromium.launch().then(browser => browser.newContext().then(context => context.newPage()));
-    // expect(page.goto).toHaveBeenCalledWith('https://claude.ai/projects/project-id');
+    const project = await client.getProject(projectId);
+    
+    expect(project).toBeDefined();
+    expect(project.id).toBe(projectId);
+    expect(project.knowledgeBase).toBeDefined();
+    expect(project.knowledgeBase.fileCount).toBeGreaterThanOrEqual(0);
+    expect(project.knowledgeBase.totalSizeBytes).toBeGreaterThanOrEqual(0);
   });
   
-  test('should extract project files', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
-    
-    // The test will check that the browser automation can extract project files
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // await automation.navigateToProject('project-id');
-    // const files = await automation.getProjectFiles();
-    // expect(files).toBeInstanceOf(Array);
+  it('should throw error for non-existent project', async () => {
+    await expect(client.getProject('invalid-project-id')).rejects.toThrow(
+      'Project with ID invalid-project-id not found'
+    );
   });
   
-  test('should upload a file to a project', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
+  it('should list knowledge files for a project', async () => {
+    const projects = await client.listProjects();
+    const projectId = projects[0].id;
     
-    // The test will check that the browser automation can upload a file to a project
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // await automation.navigateToProject('project-id');
-    // await automation.uploadFile('test-file.txt', 'Test content');
-    // const page = await playwright.chromium.launch().then(browser => browser.newContext().then(context => context.newPage()));
-    // expect(page.click).toHaveBeenCalledWith('#upload-file');
+    const files = await client.listKnowledgeFiles(projectId);
+    
+    expect(files).toBeDefined();
+    expect(Array.isArray(files)).toBe(true);
+    
+    if (files.length > 0) {
+      const file = files[0];
+      expect(file.id).toBeDefined();
+      expect(file.name).toBeDefined();
+      expect(file.path).toBeDefined();
+      expect(typeof file.sizeBytes).toBe('number');
+      expect(file.mimeType).toBeDefined();
+      expect(file.createdAt).toBeDefined();
+      expect(file.updatedAt).toBeDefined();
+    }
   });
   
-  test('should download a file from a project', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
+  it('should get specific knowledge file', async () => {
+    const projects = await client.listProjects();
+    const projectId = projects[0].id;
     
-    // The test will check that the browser automation can download a file from a project
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // await automation.navigateToProject('project-id');
-    // const content = await automation.downloadFile('file-id');
-    // expect(content).toBeDefined();
+    const file = await client.getKnowledgeFile(projectId, 'test-file-id');
+    
+    expect(file).toBeDefined();
+    expect(file.id).toBe('test-file-id');
+    expect(file.name).toBeDefined();
+    expect(file.content).toBeDefined();
+    expect(typeof file.sizeBytes).toBe('number');
   });
   
-  test('should close browser', async () => {
-    // We'll need to implement this once we have the BrowserAutomation code
-    // For now, this is a placeholder
+  it('should upload a knowledge file', async () => {
+    const projects = await client.listProjects();
+    const projectId = projects[0].id;
     
-    // The test will check that the browser automation can close the browser
-    // const automation = new BrowserAutomation();
-    // await automation.initialize();
-    // await automation.close();
-    // const browser = await playwright.chromium.launch();
-    // expect(browser.close).toHaveBeenCalled();
+    const testContent = 'This is test file content for upload';
+    const testFilePath = 'test/upload/file.txt';
+    
+    const uploadedFile = await client.uploadKnowledgeFile(projectId, testFilePath, testContent);
+    
+    expect(uploadedFile).toBeDefined();
+    expect(uploadedFile.id).toBeDefined();
+    expect(uploadedFile.name).toBe('file.txt');
+    expect(uploadedFile.path).toBe(testFilePath);
+    expect(uploadedFile.content).toBe(testContent);
+    expect(uploadedFile.sizeBytes).toBe(Buffer.from(testContent).length);
+    expect(uploadedFile.mimeType).toBe('text/plain');
+  });
+  
+  it('should upload a knowledge file with Buffer content', async () => {
+    const projects = await client.listProjects();
+    const projectId = projects[0].id;
+    
+    const testContent = Buffer.from('Binary test content', 'utf-8');
+    const testFilePath = 'test/binary/data.bin';
+    
+    const uploadedFile = await client.uploadKnowledgeFile(projectId, testFilePath, testContent);
+    
+    expect(uploadedFile).toBeDefined();
+    expect(uploadedFile.id).toBeDefined();
+    expect(uploadedFile.name).toBe('data.bin');
+    expect(uploadedFile.path).toBe(testFilePath);
+    expect(uploadedFile.content).toBe(testContent.toString('utf-8'));
+    expect(uploadedFile.sizeBytes).toBe(testContent.length);
+  });
+  
+  it('should throw error when uploading to non-existent project', async () => {
+    const testContent = 'test content';
+    const testFilePath = 'test.txt';
+    
+    await expect(
+      client.uploadKnowledgeFile('invalid-project', testFilePath, testContent)
+    ).rejects.toThrow('Project with ID invalid-project not found');
+  });
+  
+  it('should delete a knowledge file', async () => {
+    const projects = await client.listProjects();
+    const projectId = projects[0].id;
+    
+    // Should not throw
+    await expect(
+      client.deleteKnowledgeFile(projectId, 'test-file-id')
+    ).resolves.not.toThrow();
+  });
+  
+  it('should throw error when deleting from non-existent project', async () => {
+    await expect(
+      client.deleteKnowledgeFile('invalid-project', 'test-file-id')
+    ).rejects.toThrow('Project with ID invalid-project not found');
+  });
+  
+  it('should get current user information', async () => {
+    const user = await client.getCurrentUser();
+    
+    expect(user).toBeDefined();
+    expect(user.id).toBe('user-browser');
+    expect(user.email).toBe('test@example.com');
+    expect(user.name).toBe('Browser User');
+    expect(user.accountType).toBe('plus');
+  });
+  
+  it('should handle file path extraction correctly', async () => {
+    const projects = await client.listProjects();
+    const projectId = projects[0].id;
+    
+    // Test various file path formats
+    const testCases = [
+      { path: 'simple.txt', expectedName: 'simple.txt' },
+      { path: 'folder/file.js', expectedName: 'file.js' },
+      { path: 'deep/nested/path/document.md', expectedName: 'document.md' },
+      { path: 'no-extension', expectedName: 'no-extension' }
+    ];
+    
+    for (const testCase of testCases) {
+      const uploadedFile = await client.uploadKnowledgeFile(
+        projectId, 
+        testCase.path, 
+        'test content'
+      );
+      
+      expect(uploadedFile.name).toBe(testCase.expectedName);
+      expect(uploadedFile.path).toBe(testCase.path);
+    }
+  });
+  
+  it('should create sample projects on first access', async () => {
+    const newClient = new ClaudeBrowserClient({
+      email: 'fresh@example.com',
+      password: 'password'
+    });
+    
+    // First call should create sample projects
+    const projects1 = await newClient.listProjects();
+    expect(projects1.length).toBeGreaterThan(0);
+    
+    // Second call should return the same projects
+    const projects2 = await newClient.listProjects();
+    expect(projects2.length).toBe(projects1.length);
+    expect(projects2[0].id).toBe(projects1[0].id);
+  });
+  
+  it('should maintain login state across multiple calls', async () => {
+    // Make multiple calls to verify login state is maintained
+    const projects1 = await client.listProjects();
+    const projects2 = await client.listProjects();
+    const user = await client.getCurrentUser();
+    
+    // All calls should succeed without throwing login errors
+    expect(projects1).toBeDefined();
+    expect(projects2).toBeDefined();
+    expect(user).toBeDefined();
+    
+    // Should have consistent data
+    expect(projects2.length).toBe(projects1.length);
   });
 });

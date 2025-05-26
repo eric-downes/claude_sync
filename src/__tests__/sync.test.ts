@@ -1,79 +1,164 @@
-import { describe, test, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { syncFiles } from '../sync/sync.js';
-import * as configModule from '../config/configure.js';
-import * as claudeApi from '../api/claude.js';
+import * as configure from '../config/configure.js';
+import * as claude from '../api/claude.js';
 
-// Mock the config module
-jest.mock('../config/configure.js', () => ({
-  getProjectConfig: jest.fn(),
-  updateLastSynced: jest.fn()
-}));
-
-// Mock the Claude API module
-jest.mock('../api/claude.js', () => ({
-  uploadFileToProject: jest.fn(),
-  downloadFilesFromProject: jest.fn()
+// Mock the dependencies
+vi.mock('../config/configure.js');
+vi.mock('../api/claude.js');
+vi.mock('fs/promises', () => ({
+  readdir: vi.fn(),
+  readFile: vi.fn(),
+  writeFile: vi.fn(),
+  mkdir: vi.fn(),
 }));
 
 describe('Sync Module', () => {
+  const mockProjectConfig = {
+    projectId: 'test-project-123',
+    localPath: '/mock/project/path',
+    excludePatterns: ['node_modules/**', '.git/**']
+  };
+
+  const mockFiles = [
+    { id: 'file1', name: 'src/main.ts', content: 'console.log("test");' },
+    { id: 'file2', name: 'README.md', content: '# Test Project' }
+  ];
+
   beforeEach(() => {
-    // Reset mocks
-    jest.resetAllMocks();
+    vi.clearAllMocks();
     
-    // Setup default mock responses
-    (configModule.getProjectConfig as jest.Mock).mockReturnValue({
-      projectId: 'test-project-id',
-      projectName: 'Test Project',
-      localPath: '/test/path',
-      excludePatterns: ['node_modules', '*.log']
-    });
+    // Mock console methods to suppress output during tests
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should throw error if project not found', async () => {
+    // Mock getProjectConfig to return null
+    vi.mocked(configure.getProjectConfig).mockReturnValue(null);
+
+    await expect(syncFiles('nonexistent-project')).rejects.toThrow(
+      'Project "nonexistent-project" not found. Please configure it first.'
+    );
+  });
+  
+  it('should sync in upload direction only', async () => {
+    // Mock project config
+    vi.mocked(configure.getProjectConfig).mockReturnValue(mockProjectConfig);
+    vi.mocked(configure.updateLastSynced).mockImplementation(() => {});
     
-    (claudeApi.downloadFilesFromProject as jest.Mock).mockResolvedValue([
-      {
-        name: 'test.txt',
-        content: 'test content',
-        lastModified: new Date()
-      }
+    // Mock file system
+    const fs = await import('fs/promises');
+    vi.mocked(fs.readdir).mockResolvedValue([
+      { name: 'src', isDirectory: () => true } as any,
+      { name: 'README.md', isDirectory: () => false } as any
     ]);
-  });
-  
-  test('should throw error if project not found', async () => {
-    // Setup
-    (configModule.getProjectConfig as jest.Mock).mockReturnValue(null);
+    vi.mocked(fs.readFile).mockResolvedValue('file content');
     
-    // Act & Assert
-    await expect(async () => {
-      await syncFiles('non-existent-project');
-    }).rejects.toThrow('Project "non-existent-project" not found');
-  });
-  
-  test('should sync in upload direction only', async () => {
-    // Act
+    // Mock API calls
+    vi.mocked(claude.uploadFileToProject).mockResolvedValue(undefined);
+    vi.mocked(claude.downloadFilesFromProject).mockResolvedValue([]);
+
     await syncFiles('test-project', 'upload');
-    
-    // Assert
-    expect(claudeApi.uploadFileToProject).toHaveBeenCalled();
-    expect(claudeApi.downloadFilesFromProject).not.toHaveBeenCalled();
-    expect(configModule.updateLastSynced).toHaveBeenCalledWith('test-project');
+
+    // Verify upload was called but download was not
+    expect(claude.uploadFileToProject).toHaveBeenCalled();
+    expect(claude.downloadFilesFromProject).not.toHaveBeenCalled();
+    expect(configure.updateLastSynced).toHaveBeenCalledWith('test-project');
   });
   
-  test('should sync in download direction only', async () => {
-    // Act
+  it('should sync in download direction only', async () => {
+    // Mock project config
+    vi.mocked(configure.getProjectConfig).mockReturnValue(mockProjectConfig);
+    vi.mocked(configure.updateLastSynced).mockImplementation(() => {});
+    
+    // Mock API calls
+    vi.mocked(claude.uploadFileToProject).mockResolvedValue(undefined);
+    vi.mocked(claude.downloadFilesFromProject).mockResolvedValue(mockFiles);
+    
+    // Mock file system
+    const fs = await import('fs/promises');
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
     await syncFiles('test-project', 'download');
-    
-    // Assert
-    expect(claudeApi.uploadFileToProject).not.toHaveBeenCalled();
-    expect(claudeApi.downloadFilesFromProject).toHaveBeenCalledWith('test-project-id');
-    expect(configModule.updateLastSynced).toHaveBeenCalledWith('test-project');
+
+    // Verify download was called but upload was not
+    expect(claude.downloadFilesFromProject).toHaveBeenCalledWith(mockProjectConfig.projectId);
+    expect(claude.uploadFileToProject).not.toHaveBeenCalled();
+    expect(fs.writeFile).toHaveBeenCalledTimes(2); // Two mock files
+    expect(configure.updateLastSynced).toHaveBeenCalledWith('test-project');
   });
   
-  test('should sync in both directions by default', async () => {
-    // Act
-    await syncFiles('test-project');
+  it('should sync in both directions by default', async () => {
+    // Mock project config
+    vi.mocked(configure.getProjectConfig).mockReturnValue(mockProjectConfig);
+    vi.mocked(configure.updateLastSynced).mockImplementation(() => {});
     
-    // Assert
-    expect(claudeApi.uploadFileToProject).toHaveBeenCalled();
-    expect(claudeApi.downloadFilesFromProject).toHaveBeenCalledWith('test-project-id');
-    expect(configModule.updateLastSynced).toHaveBeenCalledWith('test-project');
+    // Mock file system for upload
+    const fs = await import('fs/promises');
+    vi.mocked(fs.readdir).mockResolvedValue([
+      { name: 'test.ts', isDirectory: () => false } as any
+    ]);
+    vi.mocked(fs.readFile).mockResolvedValue('test content');
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    
+    // Mock API calls
+    vi.mocked(claude.uploadFileToProject).mockResolvedValue(undefined);
+    vi.mocked(claude.downloadFilesFromProject).mockResolvedValue(mockFiles);
+
+    await syncFiles('test-project'); // Should default to 'both'
+
+    // Verify both upload and download were called
+    expect(claude.uploadFileToProject).toHaveBeenCalled();
+    expect(claude.downloadFilesFromProject).toHaveBeenCalledWith(mockProjectConfig.projectId);
+    expect(configure.updateLastSynced).toHaveBeenCalledWith('test-project');
+  });
+
+  it('should handle upload errors gracefully', async () => {
+    // Mock project config
+    vi.mocked(configure.getProjectConfig).mockReturnValue(mockProjectConfig);
+    vi.mocked(configure.updateLastSynced).mockImplementation(() => {});
+    
+    // Mock file system
+    const fs = await import('fs/promises');
+    vi.mocked(fs.readdir).mockResolvedValue([
+      { name: 'test.ts', isDirectory: () => false } as any
+    ]);
+    vi.mocked(fs.readFile).mockResolvedValue('test content');
+    
+    // Mock API call to throw error
+    vi.mocked(claude.uploadFileToProject).mockRejectedValue(new Error('Upload failed'));
+    vi.mocked(claude.downloadFilesFromProject).mockResolvedValue([]);
+
+    // Should not throw, but handle error gracefully
+    await expect(syncFiles('test-project', 'upload')).resolves.not.toThrow();
+    
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to upload'),
+      expect.any(Error)
+    );
+  });
+
+  it('should handle download errors gracefully', async () => {
+    // Mock project config
+    vi.mocked(configure.getProjectConfig).mockReturnValue(mockProjectConfig);
+    vi.mocked(configure.updateLastSynced).mockImplementation(() => {});
+    
+    // Mock API call to throw error
+    vi.mocked(claude.downloadFilesFromProject).mockRejectedValue(new Error('Download failed'));
+
+    // Should not throw, but handle error gracefully
+    await expect(syncFiles('test-project', 'download')).resolves.not.toThrow();
+    
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Error during download'),
+      expect.any(Error)
+    );
   });
 });

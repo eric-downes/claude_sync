@@ -1,128 +1,216 @@
-import { describe, test, expect, jest, beforeEach } from '@jest/globals';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import os from 'node:os';
-import { syncFiles } from '../sync/sync.js';
-import { ClaudeClientFactory } from '../api/client-factory.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import path from 'path';
+import os from 'os';
+import fs from 'fs/promises';
 import { MockClaudeClient } from '../api/mock-claude-client.js';
-import * as configModule from '../config/configure.js';
+import { syncFiles } from '../sync/sync.js';
+import * as configure from '../config/configure.js';
+import { ClaudeClientFactory } from '../api/client-factory.js';
 
-// This test creates temporary directories and files to test syncing
-// It uses the mock client to avoid real API calls
+// Mock the dependencies
+vi.mock('../config/configure.js');
+vi.mock('../api/client-factory.js');
 
 describe('Sync Integration', () => {
   let tempDir: string;
   let mockClient: MockClaudeClient;
   let projectId: string;
-  
-  // Mock the configuration module
-  jest.mock('../config/configure.js', () => ({
-    getProjectConfig: jest.fn(),
-    updateLastSynced: jest.fn(),
-    getAllProjects: jest.fn()
-  }));
-  
-  // Mock the client factory to return our mock client
-  jest.spyOn(ClaudeClientFactory, 'getClient').mockImplementation(() => mockClient);
+  let projectConfig: any;
   
   beforeEach(async () => {
-    // Create a temp directory for test files
+    vi.clearAllMocks();
+    
+    // Mock console methods to suppress output during tests
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Create a temp directory path
     tempDir = path.join(os.tmpdir(), `claude-sync-test-${Date.now()}`);
-    await fs.mkdir(tempDir, { recursive: true });
     
     // Create a mock client
     mockClient = new MockClaudeClient();
+    
+    // Mock the client factory to return our mock client
+    vi.mocked(ClaudeClientFactory.getClient).mockReturnValue(mockClient);
     
     // Get a project ID from the mock client
     const projects = await mockClient.listProjects();
     projectId = projects[0].id;
     
-    // Setup mock project config
-    (configModule.getProjectConfig as jest.Mock).mockReturnValue({
+    // Create project config
+    projectConfig = {
       projectId,
-      projectName: 'Test Project',
       localPath: tempDir,
-      excludePatterns: ['node_modules', '*.log']
-    });
+      excludePatterns: ['node_modules/**', '.git/**', '*.log']
+    };
+    
+    // Mock configuration functions
+    vi.mocked(configure.getProjectConfig).mockReturnValue(projectConfig);
+    vi.mocked(configure.updateLastSynced).mockImplementation(() => {});
+    
+    // Create temp directory
+    await fs.mkdir(tempDir, { recursive: true });
   });
   
   afterEach(async () => {
+    vi.restoreAllMocks();
+    
     // Clean up temp directory
-    await fs.rm(tempDir, { recursive: true, force: true });
-    jest.resetAllMocks();
-  });
-  
-  test('should upload local files to Claude project', async () => {
-    // Create test files
-    const file1Path = path.join(tempDir, 'test1.txt');
-    const file2Path = path.join(tempDir, 'test2.md');
-    const subdirPath = path.join(tempDir, 'subdir');
-    const file3Path = path.join(subdirPath, 'test3.json');
-    
-    await fs.writeFile(file1Path, 'Test file 1 content');
-    await fs.writeFile(file2Path, 'Test file 2 content');
-    await fs.mkdir(subdirPath, { recursive: true });
-    await fs.writeFile(file3Path, '{"key": "Test file 3 content"}');
-    
-    // Create a file that should be excluded
-    await fs.writeFile(path.join(tempDir, 'test.log'), 'This should be excluded');
-    
-    // Sync files (upload direction)
-    await syncFiles('Test Project', 'upload');
-    
-    // Verify files were uploaded
-    const files = await mockClient.listKnowledgeFiles(projectId);
-    expect(files.length).toBe(3); // Excluding the .log file
-    
-    // Verify file names
-    const fileNames = files.map(f => f.name);
-    expect(fileNames.includes('test1.txt')).toBe(true);
-    expect(fileNames.includes('test2.md')).toBe(true);
-    expect(fileNames.includes('test3.json')).toBe(true);
-    expect(fileNames.includes('test.log')).toBe(false); // Should be excluded
-    
-    // Verify file contents (one is enough for the test)
-    const testFile = files.find(f => f.name === 'test1.txt');
-    if (testFile) {
-      const fileContent = await mockClient.getKnowledgeFile(projectId, testFile.id);
-      expect(fileContent.content).toBe('Test file 1 content');
+    try {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    } catch (error) {
+      // Ignore cleanup errors
     }
   });
   
-  test('should download files from Claude project to local directory', async () => {
-    // Upload test files to the mock project
-    await mockClient.uploadKnowledgeFile(projectId, 'download1.txt', 'Download test 1');
-    await mockClient.uploadKnowledgeFile(projectId, 'download2.md', 'Download test 2');
+  it('should upload local files to Claude project', async () => {
+    // Create test files in temp directory
+    const srcDir = path.join(tempDir, 'src');
+    await fs.mkdir(srcDir, { recursive: true });
     
-    // Sync files (download direction)
-    await syncFiles('Test Project', 'download');
+    const testFiles = {
+      'src/main.ts': 'console.log("Hello, Claude!");',
+      'README.md': '# Test Project\n\nThis is a test project for sync integration.',
+      'package.json': JSON.stringify({ name: 'test-project', version: '1.0.0' }, null, 2)
+    };
     
-    // Verify files were downloaded
-    const file1Content = await fs.readFile(path.join(tempDir, 'download1.txt'), 'utf-8');
-    const file2Content = await fs.readFile(path.join(tempDir, 'download2.md'), 'utf-8');
+    // Write test files
+    for (const [filePath, content] of Object.entries(testFiles)) {
+      const fullPath = path.join(tempDir, filePath);
+      await fs.mkdir(path.dirname(fullPath), { recursive: true });
+      await fs.writeFile(fullPath, content);
+    }
     
-    expect(file1Content).toBe('Download test 1');
-    expect(file2Content).toBe('Download test 2');
+    // Sync files (upload only)
+    await syncFiles('test-project', 'upload');
+    
+    // Verify files were uploaded to the mock client
+    const uploadedFiles = await mockClient.listKnowledgeFiles(projectId);
+    expect(uploadedFiles).toHaveLength(3);
+    
+    // Check that the correct files were uploaded
+    const fileNames = uploadedFiles.map(f => f.name).sort();
+    expect(fileNames).toEqual(['README.md', 'package.json', 'src/main.ts']);
+    
+    // Verify file contents
+    const mainFile = uploadedFiles.find(f => f.name === 'src/main.ts');
+    expect(mainFile?.content).toBe('console.log("Hello, Claude!");');
+    
+    const readmeFile = uploadedFiles.find(f => f.name === 'README.md');
+    expect(readmeFile?.content).toBe('# Test Project\n\nThis is a test project for sync integration.');
   });
   
-  test('should sync bidirectionally', async () => {
-    // Create a local file
-    const localFilePath = path.join(tempDir, 'local.txt');
-    await fs.writeFile(localFilePath, 'Local file content');
+  it('should download files from Claude project to local directory', async () => {
+    // First, upload some files to the mock client
+    const testFiles = [
+      { name: 'src/app.ts', content: 'export class App {}' },
+      { name: 'docs/guide.md', content: '# User Guide\n\nHow to use this app.' },
+      { name: 'config.json', content: '{"debug": true}' }
+    ];
     
-    // Upload a file to the mock project
-    await mockClient.uploadKnowledgeFile(projectId, 'remote.txt', 'Remote file content');
+    for (const file of testFiles) {
+      await mockClient.uploadKnowledgeFile(projectId, file.name, file.content);
+    }
     
-    // Sync files (both directions)
-    await syncFiles('Test Project', 'both');
+    // Sync files (download only)
+    await syncFiles('test-project', 'download');
+    
+    // Verify files were downloaded to the temp directory
+    const appFile = await fs.readFile(path.join(tempDir, 'src/app.ts'), 'utf-8');
+    expect(appFile).toBe('export class App {}');
+    
+    const guideFile = await fs.readFile(path.join(tempDir, 'docs/guide.md'), 'utf-8');
+    expect(guideFile).toBe('# User Guide\n\nHow to use this app.');
+    
+    const configFile = await fs.readFile(path.join(tempDir, 'config.json'), 'utf-8');
+    expect(configFile).toBe('{"debug": true}');
+  });
+  
+  it('should sync bidirectionally', async () => {
+    // Create some local files
+    const localDir = path.join(tempDir, 'local-only');
+    await fs.mkdir(localDir, { recursive: true });
+    await fs.writeFile(path.join(localDir, 'local.ts'), 'console.log("local file");');
+    
+    // Upload some files to the remote project
+    await mockClient.uploadKnowledgeFile(projectId, 'remote-only/remote.ts', 'console.log("remote file");');
+    
+    // Sync bidirectionally
+    await syncFiles('test-project', 'both');
     
     // Verify local file was uploaded
-    const projectFiles = await mockClient.listKnowledgeFiles(projectId);
-    const localFileInProject = projectFiles.find(f => f.name === 'local.txt');
-    expect(localFileInProject).toBeDefined();
+    const remoteFiles = await mockClient.listKnowledgeFiles(projectId);
+    const uploadedLocal = remoteFiles.find(f => f.name === 'local-only/local.ts');
+    expect(uploadedLocal).toBeDefined();
+    expect(uploadedLocal?.content).toBe('console.log("local file");');
     
     // Verify remote file was downloaded
-    const remoteFileContent = await fs.readFile(path.join(tempDir, 'remote.txt'), 'utf-8');
-    expect(remoteFileContent).toBe('Remote file content');
+    const downloadedRemote = await fs.readFile(path.join(tempDir, 'remote-only/remote.ts'), 'utf-8');
+    expect(downloadedRemote).toBe('console.log("remote file");');
+  });
+  
+  it('should respect exclude patterns during upload', async () => {
+    // Create files that should be excluded
+    const nodeModulesDir = path.join(tempDir, 'node_modules');
+    await fs.mkdir(nodeModulesDir, { recursive: true });
+    await fs.writeFile(path.join(nodeModulesDir, 'package.js'), 'module.exports = {};');
+    
+    const gitDir = path.join(tempDir, '.git');
+    await fs.mkdir(gitDir, { recursive: true });
+    await fs.writeFile(path.join(gitDir, 'config'), '[core]');
+    
+    await fs.writeFile(path.join(tempDir, 'debug.log'), 'debug info');
+    
+    // Also create a file that should be included
+    await fs.writeFile(path.join(tempDir, 'src/index.ts'), 'export default {};');
+    await fs.mkdir(path.join(tempDir, 'src'), { recursive: true });
+    
+    // Sync files (upload only)
+    await syncFiles('test-project', 'upload');
+    
+    // Verify only the allowed file was uploaded
+    const uploadedFiles = await mockClient.listKnowledgeFiles(projectId);
+    expect(uploadedFiles).toHaveLength(1);
+    expect(uploadedFiles[0].name).toBe('src/index.ts');
+  });
+  
+  it('should handle sync errors gracefully', async () => {
+    // Mock the client to throw an error
+    const errorClient = {
+      ...mockClient,
+      listKnowledgeFiles: vi.fn().mockRejectedValue(new Error('Network error')),
+      uploadKnowledgeFile: vi.fn().mockRejectedValue(new Error('Upload failed'))
+    };
+    
+    vi.mocked(ClaudeClientFactory.getClient).mockReturnValue(errorClient as any);
+    
+    // Create a test file
+    await fs.writeFile(path.join(tempDir, 'test.ts'), 'test content');
+    
+    // Sync should not throw but handle errors gracefully
+    await expect(syncFiles('test-project', 'both')).resolves.not.toThrow();
+    
+    // Verify error was logged
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Error during'),
+      expect.any(Error)
+    );
+  });
+  
+  it('should create directories as needed during download', async () => {
+    // Upload a file with nested directory structure
+    await mockClient.uploadKnowledgeFile(projectId, 'deep/nested/path/file.ts', 'export {};');
+    
+    // Sync files (download only)
+    await syncFiles('test-project', 'download');
+    
+    // Verify the nested directory structure was created
+    const filePath = path.join(tempDir, 'deep/nested/path/file.ts');
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    expect(fileContent).toBe('export {};');
+    
+    // Verify directories exist
+    const stats = await fs.stat(path.join(tempDir, 'deep/nested/path'));
+    expect(stats.isDirectory()).toBe(true);
   });
 });

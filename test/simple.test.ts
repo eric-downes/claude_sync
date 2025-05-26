@@ -1,7 +1,7 @@
-import { describe, test, expect } from '@jest/globals';
+import { describe, it, expect } from 'vitest';
 
 describe('Simple Test', () => {
-  test('basic test works', () => {
+  it('basic test works', () => {
     expect(true).toBe(true);
   });
 });

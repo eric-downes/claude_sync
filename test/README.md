@@ -2,25 +2,27 @@
 
 This directory contains the test framework for the Claude Sync project, following a test-driven development (TDD) approach.
 
-## Current Status and Known Issues
+## Test Framework
 
-The test framework is currently in the process of being set up. There are some configuration issues that need to be resolved:
+We are using **Vitest** as our testing framework, which provides excellent support for:
+- ESM modules
+- TypeScript
+- Fast execution
+- Compatible Jest-like API
 
-1. **ESM vs CommonJS**: The project uses ESM modules (`"type": "module"` in package.json), but Jest has some compatibility issues with ESM. We're working on a solution.
+Vitest was chosen over Jest because it has better native support for ESM modules, which is important since our project uses `"type": "module"` in package.json.
 
-2. **TypeScript Integration**: TypeScript tests need special configuration to work with Jest in an ESM environment.
+## Current Status
 
-3. **Global Mock Setup**: The setup file for global mocks and utilities needs to be properly integrated with Jest.
+The test framework is now fully set up and ready for use. We have:
 
-### Next Steps for Test Framework Setup
+1. Configured Vitest with TypeScript support
+2. Set up global mocks and utilities
+3. Created placeholder tests as specifications
+4. Implemented test utilities for file system operations
+5. Added examples of working tests
 
-1. Configure Jest to properly handle ESM modules
-2. Fix TypeScript integration with Jest
-3. Set up proper global mocks and utilities
-4. Create working examples of unit tests
-5. Add integration test support
-
-Until these issues are resolved, use the test placeholders as specifications for the modules to be implemented.
+The tests are currently passing but are using placeholders for the actual implementation. As we implement the real functionality, we'll update the tests to verify the behavior.
 
 ## Directory Structure
 

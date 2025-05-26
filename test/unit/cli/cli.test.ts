@@ -1,39 +1,39 @@
 /**
  * Tests for the CLI tool
  */
-import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTestFileSystem } from '../../utils/test-utils.js';
 
 // Mock the commander module
-jest.mock('commander', () => {
+vi.mock('commander', () => {
   const mockCommand = {
-    name: jest.fn().mockReturnThis(),
-    description: jest.fn().mockReturnThis(),
-    version: jest.fn().mockReturnThis(),
-    option: jest.fn().mockReturnThis(),
-    action: jest.fn().mockReturnThis(),
-    parse: jest.fn().mockReturnThis(),
-    command: jest.fn().mockReturnThis(),
-    requiredOption: jest.fn().mockReturnThis(),
-    allowUnknownOption: jest.fn().mockReturnThis(),
-    opts: jest.fn().mockReturnValue({})
+    name: vi.fn().mockReturnThis(),
+    description: vi.fn().mockReturnThis(),
+    version: vi.fn().mockReturnThis(),
+    option: vi.fn().mockReturnThis(),
+    action: vi.fn().mockReturnThis(),
+    parse: vi.fn().mockReturnThis(),
+    command: vi.fn().mockReturnThis(),
+    requiredOption: vi.fn().mockReturnThis(),
+    allowUnknownOption: vi.fn().mockReturnThis(),
+    opts: vi.fn().mockReturnValue({})
   };
   
   return {
-    Command: jest.fn().mockImplementation(() => mockCommand)
+    Command: vi.fn().mockImplementation(() => mockCommand)
   };
 });
 
 // Mock the configuration module
-jest.mock('../../../src/config/config-manager.js', () => {
+vi.mock('../../../src/config/config-manager.js', () => {
   return {
-    loadConfig: jest.fn().mockReturnValue({
+    loadConfig: vi.fn().mockReturnValue({
       projectsDir: '/test/projects',
       apiKey: 'test-api-key',
       syncInterval: 300,
       logLevel: 'info'
     }),
-    saveConfig: jest.fn()
+    saveConfig: vi.fn()
   };
 });
 
@@ -53,10 +53,10 @@ describe('CLI Tool', () => {
     originalConsole = global.console;
     global.console = {
       ...global.console,
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      info: jest.fn()
+      log: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      info: vi.fn()
     };
     
     // Now we can import the modules that use these dependencies
@@ -72,10 +72,10 @@ describe('CLI Tool', () => {
     global.console = originalConsole;
     
     // Clear all mocks
-    jest.clearAllMocks();
+    vi.resetAllMocks();
   });
   
-  test('should initialize CLI with correct name and version', () => {
+  it('should initialize CLI with correct name and version', () => {
     // We'll need to implement this once we have the CLI code
     // For now, this is a placeholder
     
@@ -85,7 +85,7 @@ describe('CLI Tool', () => {
     // expect(mockCommand.version).toHaveBeenCalled();
   });
   
-  test('should load configuration', () => {
+  it('should load configuration', () => {
     // We'll need to implement this once we have the CLI code
     // For now, this is a placeholder
     
@@ -94,7 +94,7 @@ describe('CLI Tool', () => {
     // expect(configManager.loadConfig).toHaveBeenCalled();
   });
   
-  test('should handle sync command', () => {
+  it('should handle sync command', () => {
     // We'll need to implement this once we have the CLI code
     // For now, this is a placeholder
     
@@ -103,7 +103,7 @@ describe('CLI Tool', () => {
     // expect(syncHandler).toBeDefined();
   });
   
-  test('should handle server command', () => {
+  it('should handle server command', () => {
     // We'll need to implement this once we have the CLI code
     // For now, this is a placeholder
     
@@ -112,7 +112,7 @@ describe('CLI Tool', () => {
     // expect(serverHandler).toBeDefined();
   });
   
-  test('should handle configuration command', () => {
+  it('should handle configuration command', () => {
     // We'll need to implement this once we have the CLI code
     // For now, this is a placeholder
     
