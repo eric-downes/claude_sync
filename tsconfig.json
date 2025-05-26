@@ -8,11 +8,17 @@
     "outDir": "dist",
     "strict": true,
     "lib": ["ES2022"],
-    "types": ["node", "jest"],
+    "types": ["node", "jest", "@jest/globals"],
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "allowJs": true,
+    "skipLibCheck": true
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
   },
   "include": ["src/**/*", "test/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/*.js"]
 }

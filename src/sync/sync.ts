@@ -30,6 +30,7 @@ export async function syncFiles(projectName: string, direction: SyncDirection = 
     console.log(`Synchronization completed for project "${projectName}".`);
   } catch (error) {
     console.error('Synchronization failed:', error);
+    throw error; // Re-throw for proper error handling in tests and CLI
   }
 }
 
@@ -57,12 +58,14 @@ async function uploadLocalFiles(config: any): Promise<void> {
         console.log(`Uploaded: ${relativePath}`);
       } catch (error) {
         console.error(`Failed to upload ${relativePath}:`, error);
+        throw error; // Re-throw for proper error handling
       }
     }
     
     console.log('Upload completed.');
   } catch (error) {
     console.error('Error during upload:', error);
+    throw error; // Re-throw for proper error handling
   }
 }
 
@@ -81,59 +84,69 @@ async function downloadProjectFiles(config: any): Promise<void> {
     // Save each file locally
     for (const file of files) {
       try {
-        const filePath = path.join(localPath, file.name);
+        const filePath = path.join(localPath, file.path);
         
         // Ensure directory exists
         await fs.mkdir(path.dirname(filePath), { recursive: true });
         
         // Write file content
         await fs.writeFile(filePath, file.content || '');
-        console.log(`Downloaded: ${file.name}`);
+        console.log(`Downloaded: ${file.path}`);
       } catch (error) {
-        console.error(`Failed to save ${file.name}:`, error);
+        console.error(`Failed to save ${file.path}:`, error);
+        throw error; // Re-throw for proper error handling
       }
     }
     
     console.log('Download completed.');
   } catch (error) {
     console.error('Error during download:', error);
+    throw error; // Re-throw for proper error handling
   }
 }
 
 // Helper to recursively get all files in a directory
-async function getAllFiles(dir: string, excludePatterns?: string[]): Promise<string[]> {
+async function getAllFiles(dir: string, excludePatterns?: string[], baseDir?: string): Promise<string[]> {
+  const actualBaseDir = baseDir || dir;
   const dirents = await fs.readdir(dir, { withFileTypes: true });
   
   const files = await Promise.all(dirents.map(async (dirent) => {
     const res = path.resolve(dir, dirent.name);
     
     // Check if the file matches exclude patterns
-    if (excludePatterns && matchesAnyPattern(res, excludePatterns)) {
+    if (excludePatterns && matchesAnyPattern(res, excludePatterns, actualBaseDir)) {
       return [];
     }
     
-    return dirent.isDirectory() ? getAllFiles(res, excludePatterns) : [res];
+    return dirent.isDirectory() ? getAllFiles(res, excludePatterns, actualBaseDir) : [res];
   }));
   
   return files.flat();
 }
 
 // Check if a file path matches any of the exclude patterns
-function matchesAnyPattern(filePath: string, patterns: string[]): boolean {
-  const relativePath = path.basename(filePath);
+function matchesAnyPattern(filePath: string, patterns: string[], baseDir: string): boolean {
+  // Get relative path from base directory for pattern matching
+  const relativePath = path.relative(baseDir, filePath);
+  const normalizedPath = relativePath.replace(/\\/g, '/'); // Normalize to forward slashes
+  
   return patterns.some(pattern => {
-    // Simple glob pattern matching
-    if (pattern.startsWith('*') && pattern.endsWith('*')) {
-      const middle = pattern.slice(1, -1);
-      return relativePath.includes(middle);
+    // Handle different glob patterns
+    if (pattern.endsWith('/**')) {
+      // Directory patterns like "node_modules/**"
+      const dirName = pattern.slice(0, -3);
+      return normalizedPath.startsWith(dirName + '/') || normalizedPath === dirName;
     } else if (pattern.startsWith('*')) {
+      // File extension patterns like "*.log"
       const suffix = pattern.slice(1);
-      return relativePath.endsWith(suffix);
+      return normalizedPath.endsWith(suffix);
     } else if (pattern.endsWith('*')) {
+      // Prefix patterns
       const prefix = pattern.slice(0, -1);
-      return relativePath.startsWith(prefix);
+      return normalizedPath.startsWith(prefix);
     } else {
-      return relativePath === pattern || filePath.includes(`/${pattern}/`);
+      // Exact match
+      return normalizedPath === pattern || normalizedPath.includes('/' + pattern + '/');
     }
   });
 }

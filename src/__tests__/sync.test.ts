@@ -6,12 +6,20 @@ import * as claude from '../api/claude.js';
 // Mock the dependencies
 vi.mock('../config/configure.js');
 vi.mock('../api/claude.js');
-vi.mock('fs/promises', () => ({
-  readdir: vi.fn(),
-  readFile: vi.fn(),
-  writeFile: vi.fn(),
-  mkdir: vi.fn(),
-}));
+vi.mock('fs/promises', async (importOriginal) => {
+  return {
+    readdir: vi.fn(),
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
+    mkdir: vi.fn(),
+    default: {
+      readdir: vi.fn(),
+      readFile: vi.fn(),
+      writeFile: vi.fn(),
+      mkdir: vi.fn(),
+    }
+  };
+});
 
 describe('Sync Module', () => {
   const mockProjectConfig = {
@@ -21,8 +29,8 @@ describe('Sync Module', () => {
   };
 
   const mockFiles = [
-    { id: 'file1', name: 'src/main.ts', content: 'console.log("test");' },
-    { id: 'file2', name: 'README.md', content: '# Test Project' }
+    { id: 'file1', name: 'main.ts', path: 'src/main.ts', content: 'console.log("test");' },
+    { id: 'file2', name: 'README.md', path: 'README.md', content: '# Test Project' }
   ];
 
   beforeEach(() => {
@@ -53,11 +61,10 @@ describe('Sync Module', () => {
     
     // Mock file system
     const fs = await import('fs/promises');
-    vi.mocked(fs.readdir).mockResolvedValue([
-      { name: 'src', isDirectory: () => true } as any,
-      { name: 'README.md', isDirectory: () => false } as any
+    vi.mocked(fs.default.readdir).mockResolvedValue([
+      { name: 'test.txt', isDirectory: () => false } as any
     ]);
-    vi.mocked(fs.readFile).mockResolvedValue('file content');
+    vi.mocked(fs.default.readFile).mockResolvedValue('file content');
     
     // Mock API calls
     vi.mocked(claude.uploadFileToProject).mockResolvedValue(undefined);
@@ -82,15 +89,15 @@ describe('Sync Module', () => {
     
     // Mock file system
     const fs = await import('fs/promises');
-    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fs.default.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.default.writeFile).mockResolvedValue(undefined);
 
     await syncFiles('test-project', 'download');
 
     // Verify download was called but upload was not
     expect(claude.downloadFilesFromProject).toHaveBeenCalledWith(mockProjectConfig.projectId);
     expect(claude.uploadFileToProject).not.toHaveBeenCalled();
-    expect(fs.writeFile).toHaveBeenCalledTimes(2); // Two mock files
+    expect(fs.default.writeFile).toHaveBeenCalledTimes(2); // Two mock files
     expect(configure.updateLastSynced).toHaveBeenCalledWith('test-project');
   });
   
@@ -101,12 +108,12 @@ describe('Sync Module', () => {
     
     // Mock file system for upload
     const fs = await import('fs/promises');
-    vi.mocked(fs.readdir).mockResolvedValue([
+    vi.mocked(fs.default.readdir).mockResolvedValue([
       { name: 'test.ts', isDirectory: () => false } as any
     ]);
-    vi.mocked(fs.readFile).mockResolvedValue('test content');
-    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fs.default.readFile).mockResolvedValue('test content');
+    vi.mocked(fs.default.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.default.writeFile).mockResolvedValue(undefined);
     
     // Mock API calls
     vi.mocked(claude.uploadFileToProject).mockResolvedValue(undefined);
@@ -127,20 +134,20 @@ describe('Sync Module', () => {
     
     // Mock file system
     const fs = await import('fs/promises');
-    vi.mocked(fs.readdir).mockResolvedValue([
+    vi.mocked(fs.default.readdir).mockResolvedValue([
       { name: 'test.ts', isDirectory: () => false } as any
     ]);
-    vi.mocked(fs.readFile).mockResolvedValue('test content');
+    vi.mocked(fs.default.readFile).mockResolvedValue('test content');
     
     // Mock API call to throw error
     vi.mocked(claude.uploadFileToProject).mockRejectedValue(new Error('Upload failed'));
     vi.mocked(claude.downloadFilesFromProject).mockResolvedValue([]);
 
-    // Should not throw, but handle error gracefully
-    await expect(syncFiles('test-project', 'upload')).resolves.not.toThrow();
+    // Should throw the error now (changed behavior)
+    await expect(syncFiles('test-project', 'upload')).rejects.toThrow('Upload failed');
     
     expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to upload'),
+      expect.stringContaining('Synchronization failed'),
       expect.any(Error)
     );
   });
@@ -153,11 +160,11 @@ describe('Sync Module', () => {
     // Mock API call to throw error
     vi.mocked(claude.downloadFilesFromProject).mockRejectedValue(new Error('Download failed'));
 
-    // Should not throw, but handle error gracefully
-    await expect(syncFiles('test-project', 'download')).resolves.not.toThrow();
+    // Should throw the error now (changed behavior)
+    await expect(syncFiles('test-project', 'download')).rejects.toThrow('Download failed');
     
     expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Error during download'),
+      expect.stringContaining('Synchronization failed'),
       expect.any(Error)
     );
   });

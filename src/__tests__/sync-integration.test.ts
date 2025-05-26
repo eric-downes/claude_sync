@@ -17,6 +17,28 @@ describe('Sync Integration', () => {
   let projectId: string;
   let projectConfig: any;
   
+  // Helper function to recursively get all files
+  async function getAllFilesRecursive(dir: string): Promise<string[]> {
+    const files: string[] = [];
+    async function scan(currentDir: string): Promise<void> {
+      try {
+        const entries = await fs.readdir(currentDir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(currentDir, entry.name);
+          if (entry.isDirectory()) {
+            await scan(fullPath);
+          } else {
+            files.push(path.relative(dir, fullPath));
+          }
+        }
+      } catch (error) {
+        // Directory might not exist
+      }
+    }
+    await scan(dir);
+    return files;
+  }
+  
   beforeEach(async () => {
     vi.clearAllMocks();
     
@@ -89,14 +111,14 @@ describe('Sync Integration', () => {
     expect(uploadedFiles).toHaveLength(3);
     
     // Check that the correct files were uploaded
-    const fileNames = uploadedFiles.map(f => f.name).sort();
-    expect(fileNames).toEqual(['README.md', 'package.json', 'src/main.ts']);
+    const filePaths = uploadedFiles.map(f => f.path).sort();
+    expect(filePaths).toEqual(['README.md', 'package.json', 'src/main.ts']);
     
     // Verify file contents
-    const mainFile = uploadedFiles.find(f => f.name === 'src/main.ts');
+    const mainFile = uploadedFiles.find(f => f.path === 'src/main.ts');
     expect(mainFile?.content).toBe('console.log("Hello, Claude!");');
     
-    const readmeFile = uploadedFiles.find(f => f.name === 'README.md');
+    const readmeFile = uploadedFiles.find(f => f.path === 'README.md');
     expect(readmeFile?.content).toBe('# Test Project\n\nThis is a test project for sync integration.');
   });
   
@@ -140,7 +162,7 @@ describe('Sync Integration', () => {
     
     // Verify local file was uploaded
     const remoteFiles = await mockClient.listKnowledgeFiles(projectId);
-    const uploadedLocal = remoteFiles.find(f => f.name === 'local-only/local.ts');
+    const uploadedLocal = remoteFiles.find(f => f.path === 'local-only/local.ts');
     expect(uploadedLocal).toBeDefined();
     expect(uploadedLocal?.content).toBe('console.log("local file");');
     
@@ -162,8 +184,8 @@ describe('Sync Integration', () => {
     await fs.writeFile(path.join(tempDir, 'debug.log'), 'debug info');
     
     // Also create a file that should be included
-    await fs.writeFile(path.join(tempDir, 'src/index.ts'), 'export default {};');
     await fs.mkdir(path.join(tempDir, 'src'), { recursive: true });
+    await fs.writeFile(path.join(tempDir, 'src/index.ts'), 'export default {};');
     
     // Sync files (upload only)
     await syncFiles('test-project', 'upload');
@@ -171,7 +193,7 @@ describe('Sync Integration', () => {
     // Verify only the allowed file was uploaded
     const uploadedFiles = await mockClient.listKnowledgeFiles(projectId);
     expect(uploadedFiles).toHaveLength(1);
-    expect(uploadedFiles[0].name).toBe('src/index.ts');
+    expect(uploadedFiles[0].path).toBe('src/index.ts');
   });
   
   it('should handle sync errors gracefully', async () => {
@@ -187,12 +209,12 @@ describe('Sync Integration', () => {
     // Create a test file
     await fs.writeFile(path.join(tempDir, 'test.ts'), 'test content');
     
-    // Sync should not throw but handle errors gracefully
-    await expect(syncFiles('test-project', 'both')).resolves.not.toThrow();
+    // Sync should throw the error now (changed behavior)
+    await expect(syncFiles('test-project', 'both')).rejects.toThrow('Upload failed');
     
     // Verify error was logged
     expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Error during'),
+      expect.stringContaining('Synchronization failed'),
       expect.any(Error)
     );
   });
