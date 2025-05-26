@@ -156,7 +156,7 @@ export class SafeSync {
         
         if (!validationResult.canProceed && !this.options.force) {
           result.errors.push('Validation failed. Use --force to override.');
-          result.duration = Date.now() - startTime;
+          result.stats.duration = Date.now() - startTime;
           return result;
         }
         
@@ -179,7 +179,7 @@ export class SafeSync {
       await this.planOperations(result);
       
       // Step 3: Handle conflicts
-      if (result.validationResult?.conflicts.length > 0) {
+      if (result.validationResult?.conflicts && result.validationResult.conflicts.length > 0) {
         await this.handleConflicts(result.validationResult.conflicts, result);
       }
       
@@ -197,13 +197,13 @@ export class SafeSync {
       }
       
       result.success = result.errors.length === 0;
-      result.duration = Date.now() - startTime;
+      result.stats.duration = Date.now() - startTime;
       
       return result;
       
     } catch (error) {
       result.errors.push(`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      result.duration = Date.now() - startTime;
+      result.stats.duration = Date.now() - startTime;
       return result;
     } finally {
       await this.database.close();

@@ -2,7 +2,7 @@ import { ClaudeAPIClient } from './interfaces.js';
 import { MockClaudeClient } from './mock-claude-client.js';
 import { ClaudeDesktopClient } from './claude-desktop-client.js';
 import { ClaudeBrowserClient } from './claude-browser-client.js';
-import { LevelDBDesktopClient } from './mcp-leveldb-client.js';
+// import { LevelDBDesktopClient } from './mcp-leveldb-client.js';
 import { getApiKey } from '../config/configure.js';
 import * as fsPromises from 'node:fs/promises';
 import * as fs from 'node:fs';
@@ -50,7 +50,7 @@ export class ClaudeClientFactory {
   private static desktopClient: ClaudeDesktopClient | null = null;
   private static mockClient: MockClaudeClient | null = null;
   private static browserClient: ClaudeBrowserClient | null = null;
-  private static leveldbClient: LevelDBDesktopClient | null = null;
+  // private static leveldbClient: LevelDBDesktopClient | null = null;
   
   /**
    * Get a Claude API client based on current configuration
@@ -64,7 +64,8 @@ export class ClaudeClientFactory {
         return this.getBrowserClient();
       
       case 'leveldb':
-        return this.getLevelDBClient();
+        console.warn('LevelDB mode temporarily disabled. Using desktop client instead.');
+        return this.getDesktopClient();
       
       case 'real':
         // Eventually implement web API client here
@@ -120,17 +121,17 @@ export class ClaudeClientFactory {
    * Get the LevelDB-enabled Desktop client (singleton)
    * This client uses the MCP to access Claude Desktop's LevelDB database
    */
-  static getLevelDBClient(): ClaudeAPIClient {
-    if (!this.leveldbClient) {
-      // Use port 3000 by default for the MCP server
-      const mcpPort = process.env.MCP_LEVELDB_PORT ? 
-        parseInt(process.env.MCP_LEVELDB_PORT, 10) : 3000;
-      
-      this.leveldbClient = new LevelDBDesktopClient(mcpPort);
-      console.log(`Using LevelDB MCP on port ${mcpPort}`);
-    }
-    return this.leveldbClient;
-  }
+  // static getLevelDBClient(): ClaudeAPIClient {
+  //   if (!this.leveldbClient) {
+  //     // Use port 3000 by default for the MCP server
+  //     const mcpPort = process.env.MCP_LEVELDB_PORT ? 
+  //       parseInt(process.env.MCP_LEVELDB_PORT, 10) : 3000;
+  //     
+  //     this.leveldbClient = new LevelDBDesktopClient(mcpPort);
+  //     console.log(`Using LevelDB MCP on port ${mcpPort}`);
+  //   }
+  //   return this.leveldbClient;
+  // }
 
   /**
    * Check if Claude Desktop is installed

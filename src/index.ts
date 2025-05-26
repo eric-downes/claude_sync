@@ -7,4 +7,4 @@ export { startMCPServer } from './mcp/server.js';
 export { uploadFileToProject, downloadFilesFromProject, listAllProjects } from './api/claude.js';
 
 // Types
-export { ClaudeProject, ClaudeProjectWithKnowledge, ClaudeKnowledgeFile, ClaudeUser, ClaudeAPIClient } from './api/interfaces.js';
+export type { ClaudeProject, ClaudeProjectWithKnowledge, ClaudeKnowledgeFile, ClaudeUser, ClaudeAPIClient } from './api/interfaces.js';

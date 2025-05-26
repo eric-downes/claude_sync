@@ -111,7 +111,7 @@ program
             result.errors.forEach(error => console.log(`  • ${error}`));
           }
           
-          if (result.validationResult?.recommendations.length > 0) {
+          if (result.validationResult?.recommendations && result.validationResult.recommendations.length > 0) {
             console.log('\n💡 RECOMMENDATIONS:');
             result.validationResult.recommendations.forEach(rec => console.log(`  • ${rec}`));
           }
@@ -169,7 +169,7 @@ program
     
     // Save to config file for persistence
     const configPath = path.join(os.homedir(), '.claude-sync-config');
-    const config = { apiMode: options.mode };
+    const config: any = { apiMode: options.mode };
     
     // Add port for leveldb mode
     if (options.mode === 'leveldb') {

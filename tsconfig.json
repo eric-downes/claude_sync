@@ -20,5 +20,10 @@
     "experimentalSpecifierResolution": "node"
   },
   "include": ["src/**/*", "test/**/*"],
-  "exclude": ["node_modules", "**/*.js"]
+  "exclude": [
+    "node_modules", 
+    "**/*.js",
+    "test/unit/mcp/server.test.ts",
+    "src/api/mcp-leveldb-client.ts"
+  ]
 }

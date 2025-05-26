@@ -35,6 +35,7 @@
     "electron-store": "^8.1.0",
     "level": "^8.0.1",
     "level-read-stream": "^1.1.0",
+    "playwright": "^1.52.0",
     "winston": "^3.11.0"
   },
   "devDependencies": {

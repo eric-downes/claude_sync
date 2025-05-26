@@ -19,6 +19,10 @@ Claude Sync provides bidirectional synchronization between local files accessibl
 git clone https://github.com/yourusername/claude-sync.git
 cd claude-sync
 
+# Install the OAuth MCP submodule for enhanced authentication support
+git submodule add https://github.com/eric-downes/mcp-oauth.git mcp-oauth
+git submodule update --init --recursive
+
 # Install dependencies 
 npm install --legacy-peer-deps
 
@@ -32,9 +36,8 @@ npm install -g . --legacy-peer-deps
 ## Usage
 
 ```bash
-# Set the API mode (desktop, browser, or mock)
-claude-sync mode --mode desktop  # Use Claude Desktop app
-claude-sync mode --mode browser  # Use browser automation with Claude.ai
+# Set the API mode (browser or mock)
+claude-sync mode --mode browser  # Use browser automation with Claude.ai (recommended)
 claude-sync mode --mode mock     # Use mock client for testing
 
 # List all projects in your Claude.ai account
@@ -59,15 +62,10 @@ claude-sync server --port 8022
 
 ## API Modes
 
-Claude Sync provides multiple ways to access your Claude projects:
+Claude Sync provides access to your Claude projects through the following modes:
 
-### Desktop Mode
-Uses the Claude Desktop app to access your projects. This is the default mode and works if you have Claude Desktop installed.
-
-For enhanced access to Claude Desktop data, this project includes a LevelDB MCP submodule that can directly access Claude Desktop's database. See [LEVELDB_MCP.md](LEVELDB_MCP.md) for details.
-
-### Browser Mode
-Uses browser automation to interact with Claude.ai. This requires setting your credentials:
+### Browser Mode (Recommended)
+Uses browser automation to interact with Claude.ai. This is the primary supported method for accessing Claude projects. Set your credentials:
 
 ```bash
 # Set environment variables for Claude.ai credentials
@@ -81,6 +79,8 @@ echo "CLAUDE_PASSWORD=your-password" >> .env
 
 ### Mock Mode
 Uses a mock client that simulates Claude API responses. Useful for testing without a Claude account.
+
+**Note:** Desktop mode and LevelDB integration have been deprecated as no project data was found in the Claude Desktop database. Use browser mode for all production synchronization.
 
 ## Implementation Approach
 

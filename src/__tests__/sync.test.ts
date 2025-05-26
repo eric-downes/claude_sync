@@ -23,14 +23,33 @@ vi.mock('fs/promises', async (importOriginal) => {
 
 describe('Sync Module', () => {
   const mockProjectConfig = {
+    projectName: 'test-project',
     projectId: 'test-project-123',
     localPath: '/mock/project/path',
     excludePatterns: ['node_modules/**', '.git/**']
   };
 
   const mockFiles = [
-    { id: 'file1', name: 'main.ts', path: 'src/main.ts', content: 'console.log("test");' },
-    { id: 'file2', name: 'README.md', path: 'README.md', content: '# Test Project' }
+    { 
+      id: 'file1', 
+      name: 'main.ts', 
+      path: 'src/main.ts', 
+      content: 'console.log("test");',
+      sizeBytes: 25,
+      mimeType: 'text/typescript',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z'
+    },
+    { 
+      id: 'file2', 
+      name: 'README.md', 
+      path: 'README.md', 
+      content: '# Test Project',
+      sizeBytes: 15,
+      mimeType: 'text/markdown',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z'
+    }
   ];
 
   beforeEach(() => {

@@ -9,7 +9,7 @@ As documented in `existing-sync-tools.md`, there are currently significant limit
 1. No official API for Claude Projects
 2. Limited documentation on internal APIs
 3. The Harmony feature exists but is within the Claude.ai interface
-4. LevelDB approach abandoned - Claude Desktop's database doesn't contain project knowledge files
+4. **LevelDB approach abandoned** - Claude Desktop's database doesn't contain project knowledge files, making desktop mode unusable
 
 ## Test-Driven Implementation Strategy
 
@@ -85,13 +85,15 @@ After tests are written:
 
 ### Phase 6: Implementation of Claude Projects Integration (3 weeks)
 
-**Primary Approach: Browser Automation** (LevelDB approach abandoned)
+**Primary Approach: Browser Automation** (Only viable approach - LevelDB/desktop mode abandoned)
 
 1. Implement Puppeteer/Playwright automation for Claude.ai
 2. Create login and session management  
 3. Build project navigation and interaction
 4. Develop file upload/download functionality
 5. Handle Claude.ai interface quirks and changes
+
+**Note:** Desktop mode has been completely removed due to lack of project data in Claude Desktop's LevelDB.
 
 **Future: API Client** (when available)
 1. Implement API authentication
@@ -115,10 +117,9 @@ The current implementation includes:
 4. ✅ Mock Claude client with full CRUD operations
 5. ✅ MCP server for Claude Code integration
 6. ✅ File synchronization logic with exclusion patterns
-7. ✅ Basic desktop client (sample projects only)
+7. ❌ Desktop client (removed - no project data available in LevelDB)
 8. 🔴 Browser automation client (not implemented)
 9. 🔴 Most test implementations (placeholder tests only)
-10. ❌ LevelDB approach (abandoned - no project data available)
 
 ## Timeline and Milestones
 
