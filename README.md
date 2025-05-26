@@ -1,5 +1,7 @@
 # Claude Sync
 
+**DEPRECATED**: With the release of the [Cluade SDK](https://github.com/anthropics/anthropic-sdk-python) there is no need for this tool!
+
 A tool for synchronizing between Claude Code and Claude AI projects.
 
 ## Overview
