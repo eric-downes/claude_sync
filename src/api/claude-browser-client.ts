@@ -34,8 +34,8 @@ export class ClaudeBrowserClient implements ClaudeAPIClient {
     if (this.browser) return;
     
     this.browser = await chromium.launch({
-      headless: true, // Set to false for debugging
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      headless: false, // Set to false for debugging - you can see what's happening
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security']
     });
     
     this.context = await this.browser.newContext({
@@ -87,7 +87,8 @@ export class ClaudeBrowserClient implements ClaudeAPIClient {
     
     await this.retry(async () => {
       // Navigate to Claude.ai login page
-      await this.page!.goto(`${this.baseUrl}/login`, { waitUntil: 'networkidle' });
+      console.log('Navigating to Claude.ai login page...');
+      await this.page!.goto(`${this.baseUrl}/login`, { waitUntil: 'domcontentloaded', timeout: 60000 });
       
       // Wait for and fill in email
       await this.page!.waitForSelector('input[type="email"]', { timeout: 10000 });
