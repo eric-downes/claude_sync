@@ -1,3 +1,0 @@
-[submodule "mcp-leveldb"]
-	path = mcp-leveldb
-	url = ./mcp-leveldb
