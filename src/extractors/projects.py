@@ -175,43 +175,65 @@ class ProjectExtractor:
         (() => {
             const links = Array.from(document.querySelectorAll('a[href*="/project/"]'));
             return links.map(link => {
-                // Get the project card container
-                let cardElement = link;
-                while (cardElement && cardElement.parentElement) {
-                    const parent = cardElement.parentElement;
-                    // Check if parent contains both the link and update text
-                    if (parent.textContent.includes('Updated') && 
-                        parent.textContent.includes('ago')) {
-                        cardElement = parent;
-                    } else {
-                        break;
-                    }
-                }
-                
-                const cardText = cardElement.textContent.trim();
-                const linkText = link.textContent.trim();
-                
-                // Extract update time
-                const updateMatch = cardText.match(/Updated (\\d+ (?:day|week|month|year)s? ago)/);
-                const updated = updateMatch ? updateMatch[0] : null;
-                
-                // Clean project name (remove update info from link text)
-                let name = linkText;
-                if (updated && name.includes(updated)) {
-                    name = name.replace(updated, '').trim();
-                }
-                
                 // Extract project ID from URL
                 const projectId = link.href.split('/project/')[1] || null;
                 
-                return {
+                // Initialize result
+                const result = {
                     id: projectId,
-                    name: name,
                     url: link.href,
-                    href: link.href,
-                    updated: updated,
-                    cardText: cardText.substring(0, 200) // For debugging
+                    href: link.href
                 };
+                
+                // Extract title and description from nested structure
+                // The structure is typically:
+                // <a><div><div>Title</div><div>Description</div><div>Updated...</div></div></a>
+                
+                const topDiv = link.querySelector('div');
+                if (topDiv && topDiv.children.length >= 2) {
+                    // First child div usually contains the title
+                    const titleDiv = topDiv.children[0];
+                    if (titleDiv) {
+                        result.name = titleDiv.textContent.trim();
+                    }
+                    
+                    // Second child div contains the description
+                    const descDiv = topDiv.children[1];
+                    if (descDiv && !descDiv.textContent.includes('Updated')) {
+                        result.description = descDiv.textContent.trim();
+                    }
+                    
+                    // Look for update time
+                    for (let i = 0; i < topDiv.children.length; i++) {
+                        const child = topDiv.children[i];
+                        if (child.textContent.includes('Updated')) {
+                            const updateMatch = child.textContent.match(/Updated (\\d+ (?:day|week|month|year)s? ago)/);
+                            if (updateMatch) {
+                                result.updated = updateMatch[0];
+                            }
+                            break;
+                        }
+                    }
+                } else {
+                    // Fallback: use the full link text and try to parse it
+                    const linkText = link.textContent.trim();
+                    const updateMatch = linkText.match(/Updated (\\d+ (?:day|week|month|year)s? ago)/);
+                    
+                    if (updateMatch) {
+                        result.updated = updateMatch[0];
+                        // Remove update info to get name
+                        result.name = linkText.replace(updateMatch[0], '').trim();
+                    } else {
+                        result.name = linkText;
+                    }
+                }
+                
+                // Ensure we always have a name
+                if (!result.name) {
+                    result.name = link.textContent.trim().split('Updated')[0].trim();
+                }
+                
+                return result;
             });
         })()
         """
