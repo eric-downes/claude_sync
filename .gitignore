@@ -1,3 +1,13 @@
 claude_sync/*
 claude_auth/*
 *.pyc
+__pycache__/
+.pytest_cache/
+*.log
+*.png
+*.jpg
+*.jpeg
+api-key
+.env
+.env.local
+.DS_Store
