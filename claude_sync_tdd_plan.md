@@ -13,7 +13,7 @@ claude-sync/
 │   ├── __init__.py
 │   ├── chrome/
 │   │   ├── __init__.py
-│   │   ├── client.py          # ChromeDebugClient
+│   │   ├── client.py          # ChromeClient
 │   │   ├── connection.py      # WebSocket connection management
 │   │   └── exceptions.py      # Chrome-specific exceptions
 │   ├── extractors/
@@ -65,12 +65,14 @@ claude-sync/
    - Set up pyproject.toml with proper dependencies
    - Configure testing framework
 
-2. **ChromeDebugClient** (Week 1)
+2. **ChromeClient** (Week 1)
    - Test: Connection to Chrome debug port
    - Test: Page enumeration and filtering
    - Test: WebSocket message handling
    - Test: Error handling (no Chrome, port blocked, etc.)
    - Implementation: Basic CDP client
+   - **Manual Test**: Successfully login with/without existing credentials
+   - **Manual Test**: Handle credential expiration gracefully
 
 ### Phase 2: Data Extraction
 3. **Data Models** (Week 1)
@@ -102,8 +104,10 @@ claude-sync/
 7. **Conflict Resolution** (Week 3)
    - Test: Detect conflicts
    - Test: Generate conflict reports
-   - Test: Apply resolution strategies
-   - Implementation: Conflict handling
+   - Test: Conservative backup strategy
+   - Test: User prompts before permanent deletion
+   - Implementation: Backup + ask-on-delete strategy
+   - Note: Always keep copies, storage is not a concern for project knowledge
 
 ### Phase 4: Orchestration
 8. **SyncOrchestrator** (Week 4)
@@ -123,6 +127,13 @@ claude-sync/
     - Test: Command parsing
     - Test: Output formatting
     - Implementation: Click-based CLI
+
+### Phase 6: Containerization
+11. **Container Support** (Week 6)
+    - Research lightweight alternatives to Docker (Podman, etc.)
+    - Create container image
+    - Test cross-platform compatibility
+    - Documentation for team deployment
 
 ## Test Strategy
 
@@ -222,5 +233,5 @@ class SyncError(ClaudeSyncError):
 
 1. Set up project structure
 2. Configure testing framework
-3. Start with ChromeDebugClient tests
+3. Start with ChromeClient tests
 4. Implement incrementally following TDD
