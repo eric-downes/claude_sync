@@ -18,31 +18,43 @@
    - `SyncState` - Sync operation tracking
    - All tests passing (13/13)
 
-4. **Technology decisions**
-   - `pychrome` for async Chrome control
+4. **Implemented HTML extractors with TDD**
+   - `ProjectExtractor` - Extract projects from Claude.ai pages
+   - `KnowledgeExtractor` - Extract knowledge files from project pages
+   - Full test coverage with realistic HTML fixtures
+   - All tests passing (13/13)
+
+5. **Implemented browser management with TDD**
+   - `ChromeManager` - Manages Chrome lifecycle with Playwright
+   - `ChromeConnection` - Type-safe wrapper for browser operations
+   - `BrowserConfig` - Configuration with memory optimization
+   - Full test coverage (22/22 tests passing)
+
+6. **Technology decisions**
+   - `playwright` for browser automation (replaced pychrome)
    - `beautifulsoup4` for HTML parsing
    - `pydantic` for data validation
    - `pytest` + `pytest-asyncio` for testing
 
 ## 📋 Next Steps (Priority Order)
 
-### 1. HTML Extractors (Next)
-- [ ] Create test fixtures with real Claude HTML
-- [ ] Implement `ProjectExtractor` with BeautifulSoup
-- [ ] Implement `KnowledgeExtractor` with BeautifulSoup
-- [ ] Full test coverage
+### 1. HTML Extractors ✅
+- [x] Created test fixtures with real Claude HTML
+- [x] Implemented `ProjectExtractor` with BeautifulSoup
+- [x] Implemented `KnowledgeExtractor` with BeautifulSoup
+- [x] Full test coverage (13 tests passing)
 
-### 2. Chrome Browser Management
-- [ ] Implement `ChromeManager` class
-- [ ] Handle headless/persistent modes
-- [ ] Memory optimization flags
-- [ ] Process lifecycle management
+### 2. Chrome Browser Management ✅
+- [x] Implemented `ChromeManager` class
+- [x] Handle headless/persistent modes
+- [x] Memory optimization flags
+- [x] Process lifecycle management
 
-### 3. Async Chrome Connection
-- [ ] Implement `ChromeConnection` wrapper
-- [ ] Page navigation helpers
-- [ ] HTML extraction methods
-- [ ] Error handling and retries
+### 3. Async Chrome Connection ✅
+- [x] Implemented `ChromeConnection` wrapper
+- [x] Page navigation helpers
+- [x] HTML extraction methods
+- [x] Error handling and retries
 
 ### 4. Sync Orchestration
 - [ ] Implement `ClaudeSyncManager`
@@ -71,15 +83,26 @@ claude_sync/
 │   │   ├── project.py       ✅
 │   │   ├── knowledge.py     ✅
 │   │   └── sync.py          ✅
-│   ├── browser/             📋 (empty)
-│   ├── extractors/          📋 (empty)
+│   ├── browser/             ✅
+│   │   ├── __init__.py      ✅
+│   │   ├── config.py        ✅
+│   │   ├── manager.py       ✅
+│   │   └── connection.py    ✅
+│   ├── extractors/          ✅
+│   │   ├── __init__.py      ✅
+│   │   ├── projects.py      ✅
+│   │   └── knowledge.py     ✅
 │   ├── sync/                📋 (empty)
 │   └── storage/             📋 (empty)
 ├── tests/
 │   ├── unit/
-│   │   └── test_models.py   ✅
+│   │   ├── test_models.py     ✅
+│   │   ├── test_extractors.py ✅
+│   │   └── test_browser.py    ✅
 │   ├── integration/         📋 (empty)
-│   └── fixtures/            📋 (empty)
+│   └── fixtures/            ✅
+│       ├── __init__.py      ✅
+│       └── html_samples.py  ✅
 ├── docs/
 │   ├── production_plan_tdd.md
 │   └── implementation_status.md (this file)
