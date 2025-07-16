@@ -60,7 +60,7 @@ async def test_chrome_connection():
         try:
             browser = await manager.get_or_create_browser()
             print("✓ Connected to Chrome")
-            print(f"  Browser version: {browser.version}")
+            # Note: browser is a BrowserContext, not Browser object
             return True
         except Exception as e:
             print(f"✗ Could not connect to Chrome: {e}")
