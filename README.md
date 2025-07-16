@@ -4,7 +4,7 @@ A tool to sync your Claude.ai project knowledge files to your local machine. Thi
 
 ## Features
 
-- 🔄 **Full Project Sync** - Download all projects and their knowledge files
+- 🔄 **Project Knowledge Sync** - Download all projects and their knowledge files
 - 📁 **Organized Storage** - Maintains a clean directory structure matching your Claude.ai organization
 - 🎯 **Selective Sync** - Sync specific projects or all projects at once
 - 📊 **Progress Tracking** - Real-time progress updates during sync
@@ -21,10 +21,6 @@ A tool to sync your Claude.ai project knowledge files to your local machine. Thi
 ## Installation
 
 1. Clone the repository:
-```bash
-git clone <repository-url>
-cd claude_sync
-```
 
 2. Install dependencies:
 ```bash
