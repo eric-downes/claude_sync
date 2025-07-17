@@ -32,6 +32,10 @@ class BrowserConfig(BaseModel):
         default=720,
         description="Browser viewport height"
     )
+    strict_mode: bool = Field(
+        default=False,
+        description="Stop on first error and produce detailed failure report"
+    )
     
     def get_chrome_args(self) -> List[str]:
         """Get Chrome launch arguments for memory optimization and stability."""

@@ -35,7 +35,7 @@ async def sync_all(args):
     storage_path = Path(args.storage or "claude_sync_data")
     logger.info(f"Storage path: {storage_path}")
     
-    config = BrowserConfig(headless=args.headless)
+    config = BrowserConfig(headless=args.headless, strict_mode=args.strict)
     orchestrator = SyncOrchestrator(
         storage_path,
         browser_config=config,
@@ -58,6 +58,17 @@ async def sync_all(args):
                 print(f"  - {error['type']}: {error.get('file', error.get('project'))}")
     else:
         print(f"\n✗ Sync failed: {result.get('error', 'Unknown error')}")
+        
+        # Show strict mode report if available
+        if "strict_mode_report" in result:
+            print(f"\n📋 Strict Mode Failure Report:")
+            report = result["strict_mode_report"]
+            print(f"  Failed file: {report['error']['file']}")
+            print(f"  Project: {report['error']['project']}")
+            print(f"  Error: {report['error']['error']}")
+            print(f"  Progress: {report['progress_at_failure']['completed_files']}/{report['progress_at_failure']['total_files']} files")
+            print(f"  Report saved to: {result['report_path']}")
+        
         sys.exit(1)
 
 
@@ -66,7 +77,7 @@ async def sync_project(args):
     storage_path = Path(args.storage or "claude_sync_data")
     logger.info(f"Storage path: {storage_path}")
     
-    config = BrowserConfig(headless=args.headless)
+    config = BrowserConfig(headless=args.headless, strict_mode=args.strict)
     orchestrator = SyncOrchestrator(
         storage_path,
         browser_config=config,
@@ -117,36 +128,53 @@ async def list_projects(args):
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(description="Sync Claude.ai data locally")
-    parser.add_argument(
+    
+    subparsers = parser.add_subparsers(dest="command", help="Commands")
+    
+    # Common arguments for all commands
+    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser.add_argument(
         "--storage",
         help="Storage directory (default: claude_sync_data)",
         default="claude_sync_data"
     )
-    parser.add_argument(
+    common_parser.add_argument(
         "--headless",
         action="store_true",
         help="Run browser in headless mode"
     )
-    parser.add_argument(
+    common_parser.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress progress output"
     )
-    
-    subparsers = parser.add_subparsers(dest="command", help="Commands")
+    common_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Stop on first error and produce detailed failure report"
+    )
     
     # Sync all command
-    sync_all_parser = subparsers.add_parser("sync", help="Sync all projects")
+    sync_all_parser = subparsers.add_parser(
+        "sync", 
+        help="Sync all projects",
+        parents=[common_parser]
+    )
     
     # Sync project command
     sync_project_parser = subparsers.add_parser(
         "sync-project",
-        help="Sync a specific project"
+        help="Sync a specific project",
+        parents=[common_parser]
     )
     sync_project_parser.add_argument("project", help="Project name to sync")
     
     # List command
-    list_parser = subparsers.add_parser("list", help="List synced projects")
+    list_parser = subparsers.add_parser(
+        "list", 
+        help="List synced projects",
+        parents=[common_parser]
+    )
     
     args = parser.parse_args()
     
