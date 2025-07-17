@@ -71,8 +71,11 @@ Options:
 ## Project Structure
 
 ### Synced Data Structure
+
+By default, synced data is stored in `./claude_sync_data/` relative to your current working directory.
+
 ```
-claude_sync_data/
+./claude_sync_data/              # Created in current directory
 ├── .metadata/
 │   └── sync_state.json          # Sync history and state
 └── projects/
@@ -86,6 +89,11 @@ claude_sync_data/
         ├── project.json
         └── knowledge/
             └── ...
+```
+
+To use a custom storage location:
+```bash
+python sync_cli.py sync --storage ~/Documents/claude_backup
 ```
 
 ### Source Code Structure
