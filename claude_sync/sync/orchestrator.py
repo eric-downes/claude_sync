@@ -4,12 +4,45 @@ import logging
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Callable
 from datetime import datetime
+import json
 
 from claude_sync.browser import BrowserConfig, ChromeManager, ChromeConnection
 from claude_sync.models import Project, KnowledgeFile
 from .storage import LocalStorage
 
 logger = logging.getLogger(__name__)
+
+
+class StrictModeError(Exception):
+    """Raised when sync fails in strict mode."""
+    
+    def __init__(self, message: str, error_detail: Dict[str, Any], progress: 'SyncProgress'):
+        super().__init__(message)
+        self.error_detail = error_detail
+        self.progress = progress
+        self.report = self._generate_report()
+    
+    def _generate_report(self) -> Dict[str, Any]:
+        """Generate detailed failure report."""
+        return {
+            "error": self.error_detail,
+            "progress_at_failure": {
+                "completed_projects": self.progress.completed_projects,
+                "total_projects": self.progress.total_projects,
+                "completed_files": self.progress.completed_files,
+                "total_files": self.progress.total_files,
+                "current_project": self.progress.current_project,
+                "current_file": self.progress.current_file
+            },
+            "all_errors": self.progress.errors,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    def save_report(self, path: Path) -> None:
+        """Save failure report to file."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w') as f:
+            json.dump(self.report, f, indent=2)
 
 
 class SyncProgress:
@@ -128,6 +161,19 @@ class SyncOrchestrator:
             logger.info(f"Sync completed in {duration:.1f}s")
             return summary
             
+        except StrictModeError as e:
+            # Save failure report
+            report_path = self.storage.base_path / ".metadata" / "strict_mode_failure.json"
+            e.save_report(report_path)
+            logger.error(f"Strict mode failure. Report saved to: {report_path}")
+            
+            return {
+                "success": False,
+                "error": str(e),
+                "strict_mode_report": e.report,
+                "report_path": str(report_path),
+                "progress": self.progress.to_dict()
+            }
         except Exception as e:
             logger.error(f"Sync failed: {e}")
             return {
@@ -181,12 +227,20 @@ class SyncOrchestrator:
             self._update_progress()
             
             # Download each file
-            for file in files:
+            for i, file in enumerate(files):
                 await self._sync_knowledge_file(connection, project, file)
+                
+                # Every 5 files, do a force close to ensure clean state
+                if (i + 1) % 5 == 0 and i < len(files) - 1:
+                    logger.debug(f"Periodic modal cleanup after {i + 1} files")
+                    await connection.force_close_all_modals()
             
             # Mark project complete
             self.progress.completed_projects += 1
             self._update_progress()
+            
+            # Force close any lingering modals before moving to next project
+            await connection.force_close_all_modals()
             
         except Exception as e:
             logger.error(f"Failed to sync project {project.name}: {e}")
@@ -242,12 +296,22 @@ class SyncOrchestrator:
             
         except Exception as e:
             logger.error(f"Failed to sync file {file.name}: {e}")
-            self.progress.errors.append({
+            error_detail = {
                 "type": "file_sync",
                 "project": project.name,
                 "file": file.name,
-                "error": str(e)
-            })
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+            self.progress.errors.append(error_detail)
+            
+            # In strict mode, stop immediately and generate report
+            if self.browser_config.strict_mode:
+                raise StrictModeError(
+                    f"Strict mode: Failed to sync file {file.name} in project {project.name}",
+                    error_detail,
+                    self.progress
+                )
     
     async def _alternative_download(
         self,

@@ -67,6 +67,7 @@ Options:
   --storage PATH     Storage directory (default: claude_sync_data)
   --headless         Run browser in headless mode
   --quiet            Suppress progress output
+  --strict           Stop on first error and produce detailed failure report
 ```
 
 ## Project Structure
@@ -124,14 +125,23 @@ claude_sync/
 ## How It Works
 
 1. **Browser Automation**: Uses Playwright to control Chrome via DevTools Protocol
-2. **Project Discovery**: Navigates to Claude.ai projects page and clicks "View All" to load all projects
-3. **Content Extraction**: For each project:
+2. **Cookie Handling**: Automatically detects and accepts GDPR/cookie consent notices
+3. **Project Discovery**: Navigates to Claude.ai projects page and clicks "View All" to load all projects
+4. **Content Extraction**: For each project:
    - Navigates to the project page
    - Extracts list of knowledge files
-   - Clicks on each file to open the modal
+   - Uses context manager to safely open/close file modals
    - Extracts the file content from the modal
    - Saves to local storage
-4. **Progress Tracking**: Provides real-time updates on sync progress
+5. **Modal Management**:
+   - Context manager ensures modals are always closed
+   - Force cleanup runs between projects
+   - Periodic cleanup every 5 files within a project
+   - Aggressive modal removal if stuck states detected
+6. **Progress Tracking**: Provides real-time updates on sync progress
+7. **Error Handling**: 
+   - Normal mode: Continues on errors and reports them at the end
+   - Strict mode: Stops on first error and generates detailed failure report
 
 ## Architecture
 
@@ -150,6 +160,22 @@ Claude.ai → Browser Automation → HTML Extraction → Local Storage
                 ↑                        ↓
                 └── Progress Updates ────┘
 ```
+
+## Strict Mode
+
+When running with `--strict`, the sync will stop immediately on the first error and generate a detailed failure report:
+
+```bash
+python sync_cli.py sync --strict
+```
+
+The failure report includes:
+- Exact file and project that failed
+- Error details and timestamp
+- Progress at time of failure
+- All previous errors encountered
+
+Report is saved to: `claude_sync_data/.metadata/strict_mode_failure.json`
 
 ## Development
 
