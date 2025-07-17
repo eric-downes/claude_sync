@@ -8,7 +8,6 @@ A tool to sync your Claude.ai project knowledge files to your local machine. Thi
 - 📁 **Organized Storage** - Maintains a clean directory structure matching your Claude.ai organization
 - 🎯 **Selective Sync** - Sync specific projects or all projects at once
 - 📊 **Progress Tracking** - Real-time progress updates during sync
-- 🔍 **Automatic Pagination** - Handles "View All" to access all your projects (not just the first 30)
 - 💾 **Metadata Preservation** - Saves project descriptions and sync timestamps
 - 🖥️ **Headless Mode** - Can run in background without opening browser window
 
@@ -20,7 +19,9 @@ A tool to sync your Claude.ai project knowledge files to your local machine. Thi
 
 ## Installation
 
-1. Clone the repository:
+**Currently only tested on MacOS Sonoma**
+
+1. Clone the repository.
 
 2. Install dependencies:
 ```bash
@@ -192,10 +193,6 @@ pytest tests/
 - [ ] Scheduled automatic syncs
 - [ ] Support for other Claude.ai data types (conversations, etc.)
 
-## License
-
-[Your chosen license]
-
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please submit a Pull Request.
