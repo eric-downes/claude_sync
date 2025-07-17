@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, field_serializer
 
 
 class Project(BaseModel):
@@ -23,6 +23,9 @@ class Project(BaseModel):
             raise ValueError("URL must be a valid Claude.ai project URL")
         return v
     
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    @field_serializer('updated_at')
+    def serialize_datetime(self, v: Optional[datetime]) -> Optional[str]:
+        """Serialize datetime to ISO format."""
+        return v.isoformat() if v else None
+    
+    model_config = ConfigDict()

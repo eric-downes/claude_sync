@@ -3,7 +3,7 @@ import hashlib
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, field_serializer
 
 
 FileType = Literal["text", "pdf"]
@@ -28,12 +28,15 @@ class KnowledgeFile(BaseModel):
             raise ValueError(f"Invalid file type: {v}")
         return v
     
+    @field_serializer('created_at', 'updated_at')
+    def serialize_datetime(self, v: Optional[datetime]) -> Optional[str]:
+        """Serialize datetime to ISO format."""
+        return v.isoformat() if v else None
+    
     def calculate_content_hash(self) -> Optional[str]:
         """Calculate SHA-256 hash of content."""
         if self.content is None:
             return None
         return hashlib.sha256(self.content.encode("utf-8")).hexdigest()
     
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict()
