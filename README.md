@@ -163,35 +163,26 @@ pytest tests/
 - `test_file_download.py` - Test file content download
 - `test_sync_simple.py` - Test basic sync functionality
 
-## Limitations
+## Limitations & Troubleshooting
 
+### Not as robust as we'd like
 - Requires Chrome to be running with DevTools Protocol enabled
 - Cannot download files that require special handling (some PDFs may only save metadata)
 - Sync speed depends on number of projects and files
 - Must maintain login session in Chrome
 
-## Troubleshooting
-
-### Chrome Connection Issues
+### Chrome Connection Issues?
 - Ensure Chrome is running with `--remote-debugging-port=9222`
 - Check that no other application is using port 9222
 - Try closing all Chrome instances and restarting
 
-### Login Issues
+### Login Issues?
 - Make sure you're logged into Claude.ai in the Chrome instance
 - If using 2FA, complete the login process before running sync
 
-### File Download Issues
+### File Download Issues?
 - Some files may take longer to load - the tool waits for modals to appear
 - PDF files may only show preview text rather than full content
-
-## Future Enhancements
-
-- [ ] Incremental sync (only download new/changed files)
-- [ ] File content comparison and versioning
-- [ ] Export to different formats
-- [ ] Scheduled automatic syncs
-- [ ] Support for other Claude.ai data types (conversations, etc.)
 
 ## Contributing
 
